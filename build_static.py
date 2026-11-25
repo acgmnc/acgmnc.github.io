@@ -48,12 +48,24 @@ else:
         background_image = 'background.jpg'
 
 # 导入app.py并使用Flask测试客户端
+from flask import Flask as _Flask
+_bfr_funcs = []
+if not hasattr(_Flask, 'before_first_request'):
+    def _bfr_register(self, f):
+        _bfr_funcs.append(f)
+        return f
+    _Flask.before_first_request = _bfr_register
+
 try:
     # 动态导入app.py
     spec = importlib.util.spec_from_file_location("app", os.path.join(here, "app.py"))
     app_module = importlib.util.module_from_spec(spec)
     sys.modules["app"] = app_module
     spec.loader.exec_module(app_module)
+    for _f in _bfr_funcs:
+        with app_module.app.app_context():
+            _f()
+    _bfr_funcs.clear()
     
     # 直接使用Flask测试客户端方法（根据用户反馈，generate_static_html函数有问题）
     if hasattr(app_module, 'app'):
